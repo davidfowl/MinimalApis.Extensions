@@ -79,11 +79,11 @@ internal static class CodeGenerator
         return RequestDelegateFactory.Create(routeHandlerDelegate).RequestDelegate;
     }
 
-    private static class RouteHandlerGenerator<THandler> where THandler : delegate
+    private static class RouteHandlerGenerator<THandler> where THandler : Delegate
     {
         //private static readonly Type[] Execute_ParamTypes = new[] { typeof(TValue), typeof(HttpContext) };
 
-        public static Delegate Create(ParameterInfo? parameter, Type routeHandlerDelegateType, Action<MethodBuilder, FieldBuilder> generateExecuteMethod)
+        public static Delegate Create(Type routeHandlerDelegateType, Action<MethodBuilder, FieldBuilder> generateExecuteMethod)
         {
             // Module to generate:
             // class FakeResult : IResult
@@ -104,9 +104,7 @@ internal static class CodeGenerator
             //     }
             // }
 
-            var parameterName = parameter?.Name ?? "value";
-
-            var assemblyName = $"{nameof(GetBindOnlyRequestDelegate)}.{typeof(TValue).Name}.Assembly.{typeof(TValue).Name}.{parameterName}";
+            var assemblyName = $"{nameof(RouteHandlerGenerator<THandler>)}.Assembly";
             var asm = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var module = asm.DefineDynamicModule(assemblyName);
             var fakeResultTypeCtor = GenerateFakeResultType(module);
@@ -123,6 +121,7 @@ internal static class CodeGenerator
             routeHandlerStaticCtorIl.Emit(OpCodes.Ret);
 
             // public static IResult Execute(MyType value, HttpContext httpContext) {
+            typeof(THandler).GetGenericArguments();
             var routeHandlerExecute = routeHandlerBuilder.DefineMethod("Execute", MethodAttributes.Public | MethodAttributes.Static, typeof(IResult), Execute_ParamTypes);
 
             generateExecuteMethod(routeHandlerExecute, resultInstanceField);
